@@ -1,7 +1,7 @@
 const app = require( "express")();
 const server = require( "http" ).Server( app );
 const bodyParser = require( "body-parser" );
-const Datastore = require( "nedb" );
+const Datastore = require( "@seald-io/nedb" );
 const btoa = require('btoa');
 app.use( bodyParser.json() );
 

@@ -29,16 +29,26 @@ let moment = require('moment');
 let Swal = require('sweetalert2');
 let { ipcRenderer } = require('electron');
 let dotInterval = setInterval(function () { $(".dot").text('.') }, 3000);
-let Store = require('electron-store');
-const remote = require('electron').remote;
-const app = remote.app;
-let img_path = app.getPath('appData') + '/POS/uploads/';
+let img_path = '';
 let api = 'http://' + host + ':' + port + '/api/';
 let btoa = require('btoa');
 let jsPDF = require('jspdf');
 let html2canvas = require('html2canvas');
 let JsBarcode = require('jsbarcode');
 let macaddress = require('macaddress');
+
+// Initialize img_path when app is ready
+ipcRenderer.invoke('get-app-path', 'appData').then(appPath => {
+  img_path = appPath + '/POS/uploads/';
+}).catch(err => console.error('Failed to get app path:', err));
+
+// Store operations via IPC
+const storage = {
+  get: (key) => ipcRenderer.invoke('store-get', key),
+  set: (key, value) => ipcRenderer.send('store-set', key, value),
+  delete: (key) => ipcRenderer.send('store-delete', key)
+};
+
 let categories = [];
 let holdOrderList = [];
 let customerOrderList = [];
@@ -49,7 +59,6 @@ let auth_error = 'Incorrect username or password';
 let auth_empty = 'Please enter a username and password';
 let holdOrderlocation = $("#randerHoldOrders");
 let customerOrderLocation = $("#randerCustomerOrders");
-let storage = new Store();
 let settings;
 let platform;
 let user = {};
@@ -109,24 +118,24 @@ $.fn.serializeObject = function () {
 };
 
 
-auth = storage.get('auth');
-user = storage.get('user');
+// Initialize auth and user from storage
+(async function initializeApp() {
+    try {
+        auth = await storage.get('auth');
+        user = await storage.get('user');
 
+        if (auth == undefined) {
+            $.get(api + 'users/check/', function (data) { });
+            $("#loading").show();
+            authenticate();
+        } else {
+            $('#loading').show();
 
-if (auth == undefined) {
-    $.get(api + 'users/check/', function (data) { });
-    $("#loading").show();
-    authenticate();
+            setTimeout(function () {
+                $('#loading').hide();
+            }, 2000);
 
-} else {
-
-    $('#loading').show();
-
-    setTimeout(function () {
-        $('#loading').hide();
-    }, 2000);
-
-    platform = storage.get('settings');
+            platform = await storage.get('settings');
 
     if (platform != undefined) {
 
@@ -1915,7 +1924,10 @@ if (auth == undefined) {
     });
 
 }
-
+    } catch (error) {
+        console.error('Failed to initialize app:', error);
+    }
+})();
 
 $.fn.print = function () {
 

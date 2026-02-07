@@ -1,3 +1,4 @@
+require('@electron/remote/main').initialize()
 const electronInstaller = require('electron-winstaller');
 const path = require('path');
 
